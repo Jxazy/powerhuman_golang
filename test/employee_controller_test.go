@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"github.com/go-playground/assert/v2"
@@ -11,10 +12,12 @@ import (
 	"jxazy/powerhuman_golang/controller"
 	"jxazy/powerhuman_golang/helper"
 	"jxazy/powerhuman_golang/middleware"
+	"jxazy/powerhuman_golang/model/domain"
 	"jxazy/powerhuman_golang/repository"
 	"jxazy/powerhuman_golang/service"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -42,14 +45,15 @@ func SetupRouter(db *sql.DB) http.Handler {
 	return middleware.NewAuthMiddleware(router)
 }
 
-func truncateEmploye(db *sql.DB) {
+func truncateEmployee(db *sql.DB) {
 	db.Exec("TRUNCATE employees")
 }
 
 func TestCreateEmployeeSuccess(t *testing.T) {
 	db := setupTestDB()
+	truncateEmployee(db)
 	router := SetupRouter(db)
-	requestBody := strings.NewReader(`{"name" : "Gadget", "email" : "asuhas@gmail.com", }`)
+	requestBody := strings.NewReader(`{"name" : "Golang Unit Test 1", "email" : "golang1@gmail.com", "gender": "MALE", "age": 20, "phone": "393728", "team_id": 34, "role_id": 52}`)
 	request := httptest.NewRequest(http.MethodPost, "http://localhost:3000/api/employees", requestBody)
 	request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("X-API-Key", "RAHASIA")
@@ -65,21 +69,125 @@ func TestCreateEmployeeSuccess(t *testing.T) {
 	var responseBody map[string]interface{}
 	json.Unmarshal(body, &responseBody)
 
+	assert.Equal(t, 200, int(responseBody["code"].(float64)))
 	assert.Equal(t, "OK", responseBody["status"])
-	assert.Equal(t, "Golang Unit Test 1", responseBody["name"])
-
+	assert.Equal(t, "Golang Unit Test 1", responseBody["data"].(map[string]interface{})["name"])
+	assert.Equal(t, "golang1@gmail.com", responseBody["data"].(map[string]interface{})["email"])
+	assert.Equal(t, "MALE", responseBody["data"].(map[string]interface{})["gender"])
+	assert.Equal(t, 20, int(responseBody["data"].(map[string]interface{})["age"].(float64)))
+	assert.Equal(t, "393728", responseBody["data"].(map[string]interface{})["phone"])
+	assert.Equal(t, 34, int(responseBody["data"].(map[string]interface{})["team_id"].(float64)))
+	assert.Equal(t, 52, int(responseBody["data"].(map[string]interface{})["role_id"].(float64)))
 }
 
 func TestCreateEmployeeFailed(t *testing.T) {
+	db := setupTestDB()
+	truncateEmployee(db)
+	router := SetupRouter(db)
+	requestBody := strings.NewReader(`{"name" : ""}`)
+	request := httptest.NewRequest(http.MethodPost, "http://localhost:3000/api/employees", requestBody)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("X-API-Key", "RAHASIA")
 
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 400, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+
+	assert.Equal(t, 400, int(responseBody["code"].(float64)))
+	assert.Equal(t, "BAD REQUEST", responseBody["status"])
 }
 
 func TestUpdateEmployeeSuccess(t *testing.T) {
+	db := setupTestDB()
+	truncateEmployee(db)
 
+	tx, _ := db.Begin()
+	employeeRepository := repository.NewEmployeeRepositoryImpl()
+	employee := employeeRepository.Save(context.Background(), tx, domain.Employee{
+		Name:   "Golang Unit Test Update",
+		Email:  "golangupdate@gmail.com",
+		Gender: "MALE",
+		Age:    20,
+		Phone:  "393728",
+		TeamId: 34,
+		RoleId: 52,
+	})
+
+	tx.Commit()
+
+	router := SetupRouter(db)
+	requestBody := strings.NewReader(`{"name" : "Golang Unit Test Update", "email" : "golangupdate@gmail.com", "gender": "MALE", "age": 20, "phone": "393728", "team_id": 34, "role_id": 52}`)
+	request := httptest.NewRequest(http.MethodPut, "http://localhost:3000/api/employees/"+strconv.Itoa(employee.Id), requestBody)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("X-API-Key", "RAHASIA")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 200, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+
+	assert.Equal(t, 200, int(responseBody["code"].(float64)))
+	assert.Equal(t, "OK", responseBody["status"])
+	assert.Equal(t, employee.Id, int(responseBody["data"].(map[string]interface{})["id"].(float64)))
+	assert.Equal(t, "Golang Unit Test Update", responseBody["data"].(map[string]interface{})["name"])
+	assert.Equal(t, "golangupdate@gmail.com", responseBody["data"].(map[string]interface{})["email"])
+	assert.Equal(t, "MALE", responseBody["data"].(map[string]interface{})["gender"])
+	assert.Equal(t, 20, int(responseBody["data"].(map[string]interface{})["age"].(float64)))
+	assert.Equal(t, "393728", responseBody["data"].(map[string]interface{})["phone"])
+	assert.Equal(t, 34, int(responseBody["data"].(map[string]interface{})["team_id"].(float64)))
+	assert.Equal(t, 52, int(responseBody["data"].(map[string]interface{})["role_id"].(float64)))
 }
 
 func TestUpdateEmployeeFailed(t *testing.T) {
+	db := setupTestDB()
+	truncateEmployee(db)
 
+	tx, _ := db.Begin()
+	employeeRepository := repository.NewEmployeeRepositoryImpl()
+	employee := employeeRepository.Save(context.Background(), tx, domain.Employee{
+		Name:   "Golang Unit Test Update",
+		Email:  "golangupdate@gmail.com",
+		Gender: "MALE",
+		Age:    20,
+		Phone:  "393728",
+		TeamId: 34,
+		RoleId: 52,
+	})
+
+	tx.Commit()
+
+	router := SetupRouter(db)
+	requestBody := strings.NewReader(`{"name" : "", "email" : "golang1@gmail.com", "gender": "MALE", "age": 20, "phone": "393728", "team_id": 34, "role_id": 52}`)
+	request := httptest.NewRequest(http.MethodPut, "http://localhost:3000/api/employees/"+strconv.Itoa(employee.Id), requestBody)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("X-API-Key", "RAHASIA")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 400, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+
+	assert.Equal(t, 400, int(responseBody["code"].(float64)))
+	assert.Equal(t, "BAD REQUEST", responseBody["status"])
 }
 
 func TestGetEmployeeSuccess(t *testing.T) {
