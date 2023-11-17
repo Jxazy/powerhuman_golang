@@ -191,25 +191,229 @@ func TestUpdateEmployeeFailed(t *testing.T) {
 }
 
 func TestGetEmployeeSuccess(t *testing.T) {
+	db := setupTestDB()
+	truncateEmployee(db)
 
+	tx, _ := db.Begin()
+	employeeRepository := repository.NewEmployeeRepositoryImpl()
+	employee := employeeRepository.Save(context.Background(), tx, domain.Employee{
+		Name:   "Golang Unit Test Get",
+		Email:  "golangget@gmail.com",
+		Gender: "MALE",
+		Age:    20,
+		Phone:  "393728",
+		TeamId: 34,
+		RoleId: 52,
+	})
+
+	tx.Commit()
+
+	router := SetupRouter(db)
+	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/employees/"+strconv.Itoa(employee.Id), nil)
+	request.Header.Add("X-API-Key", "RAHASIA")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 200, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+
+	assert.Equal(t, 200, int(responseBody["code"].(float64)))
+	assert.Equal(t, "OK", responseBody["status"])
+	assert.Equal(t, employee.Id, int(responseBody["data"].(map[string]interface{})["id"].(float64)))
+	assert.Equal(t, employee.Name, responseBody["data"].(map[string]interface{})["name"])
+	assert.Equal(t, employee.Email, responseBody["data"].(map[string]interface{})["email"])
+	assert.Equal(t, employee.Gender, responseBody["data"].(map[string]interface{})["gender"])
+	assert.Equal(t, employee.Age, int(responseBody["data"].(map[string]interface{})["age"].(float64)))
+	assert.Equal(t, employee.Phone, responseBody["data"].(map[string]interface{})["phone"])
+	assert.Equal(t, employee.TeamId, int(responseBody["data"].(map[string]interface{})["team_id"].(float64)))
+	assert.Equal(t, employee.RoleId, int(responseBody["data"].(map[string]interface{})["role_id"].(float64)))
 }
 
 func TestGetEmployeeFailed(t *testing.T) {
+	db := setupTestDB()
+	truncateEmployee(db)
 
+	router := SetupRouter(db)
+	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/employees/404", nil)
+	request.Header.Add("X-API-Key", "RAHASIA")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 404, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+
+	assert.Equal(t, 404, int(responseBody["code"].(float64)))
+	assert.Equal(t, "NOT FOUND", responseBody["status"])
 }
 
 func TestDeleteEmployeeSuccess(t *testing.T) {
+	db := setupTestDB()
+	truncateEmployee(db)
 
+	tx, _ := db.Begin()
+	employeeRepository := repository.NewEmployeeRepositoryImpl()
+	employee := employeeRepository.Save(context.Background(), tx, domain.Employee{
+		Name:   "Golang Unit Test Update",
+		Email:  "golangupdate@gmail.com",
+		Gender: "MALE",
+		Age:    20,
+		Phone:  "393728",
+		TeamId: 34,
+		RoleId: 52,
+	})
+
+	tx.Commit()
+
+	router := SetupRouter(db)
+	request := httptest.NewRequest(http.MethodDelete, "http://localhost:3000/api/employees/"+strconv.Itoa(employee.Id), nil)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("X-API-Key", "RAHASIA")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 200, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+
+	assert.Equal(t, 200, int(responseBody["code"].(float64)))
+	assert.Equal(t, "OK", responseBody["status"])
 }
 
 func TestDeleteEmployeeFailed(t *testing.T) {
+	db := setupTestDB()
+	truncateEmployee(db)
 
+	router := SetupRouter(db)
+	request := httptest.NewRequest(http.MethodDelete, "http://localhost:3000/api/employees/404", nil)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("X-API-Key", "RAHASIA")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 404, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+
+	assert.Equal(t, 404, int(responseBody["code"].(float64)))
+	assert.Equal(t, "NOT FOUND", responseBody["status"])
 }
 
 func TestGetListEmployeesSucces(t *testing.T) {
+	db := setupTestDB()
+	truncateEmployee(db)
+
+	tx, _ := db.Begin()
+	employeeRepository := repository.NewEmployeeRepositoryImpl()
+	employee1 := employeeRepository.Save(context.Background(), tx, domain.Employee{
+		Name:   "Golang Unit Test List 1",
+		Email:  "golanglist1@gmail.com",
+		Gender: "MALE",
+		Age:    20,
+		Phone:  "393728",
+		TeamId: 34,
+		RoleId: 52,
+	},
+	)
+	employee2 := employeeRepository.Save(context.Background(), tx, domain.Employee{
+		Name:   "Golang Unit Test List 2",
+		Email:  "golanglist2@gmail.com",
+		Gender: "MALE",
+		Age:    20,
+		Phone:  "393728",
+		TeamId: 34,
+		RoleId: 52,
+	},
+	)
+
+	tx.Commit()
+
+	router := SetupRouter(db)
+	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/employees", nil)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("X-API-Key", "RAHASIA")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 200, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+
+	assert.Equal(t, 200, int(responseBody["code"].(float64)))
+	assert.Equal(t, "OK", responseBody["status"])
+
+	var employees = responseBody["data"].([]interface{})
+
+	employeeResponse1 := employees[0].(map[string]interface{})
+	employeeResponse2 := employees[1].(map[string]interface{})
+
+	assert.Equal(t, employee1.Id, int(employeeResponse1["id"].(float64)))
+	assert.Equal(t, employee1.Name, employeeResponse1["name"])
+	assert.Equal(t, employee1.Email, employeeResponse1["email"])
+	assert.Equal(t, employee1.Gender, employeeResponse1["gender"])
+	assert.Equal(t, employee1.Age, int(employeeResponse1["age"].(float64)))
+	assert.Equal(t, employee1.Phone, employeeResponse1["phone"])
+	assert.Equal(t, employee1.TeamId, int(employeeResponse1["team_id"].(float64)))
+	assert.Equal(t, employee1.RoleId, int(employeeResponse1["role_id"].(float64)))
+
+	assert.Equal(t, employee2.Id, int(employeeResponse2["id"].(float64)))
+	assert.Equal(t, employee2.Name, employeeResponse2["name"])
+	assert.Equal(t, employee2.Email, employeeResponse2["email"])
+	assert.Equal(t, employee2.Gender, employeeResponse2["gender"])
+	assert.Equal(t, employee2.Age, int(employeeResponse2["age"].(float64)))
+	assert.Equal(t, employee2.Phone, employeeResponse2["phone"])
+	assert.Equal(t, employee2.TeamId, int(employeeResponse2["team_id"].(float64)))
+	assert.Equal(t, employee2.RoleId, int(employeeResponse2["role_id"].(float64)))
 
 }
 
 func TestUnauthorized(t *testing.T) {
+	db := setupTestDB()
+	truncateEmployee(db)
+
+	router := SetupRouter(db)
+	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/employees", nil)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("X-API-Key", "SALAH")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 401, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+
+	assert.Equal(t, 401, int(responseBody["code"].(float64)))
+	assert.Equal(t, "UNAUTHORIZED", responseBody["status"])
 
 }
