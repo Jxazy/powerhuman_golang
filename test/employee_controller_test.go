@@ -123,7 +123,7 @@ func TestUpdateEmployeeSuccess(t *testing.T) {
 	tx.Commit()
 
 	router := SetupRouter(db)
-	requestBody := strings.NewReader(`{"name" : "Golang Unit Test Update", "email" : "golangupdate@gmail.com", "gender": "MALE", "age": 20, "phone": "393728", "team_id": 34, "role_id": 52}`)
+	requestBody := strings.NewReader(`{"name" : "Golang Unit Test Update 2", "email" : "golangupdate2@gmail.com", "gender": "MALE", "age": 20, "phone": "393728", "team_id": 34, "role_id": 52}`)
 	request := httptest.NewRequest(http.MethodPut, "http://localhost:3000/api/employees/"+strconv.Itoa(employee.Id), requestBody)
 	request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("X-API-Key", "RAHASIA")
@@ -142,8 +142,8 @@ func TestUpdateEmployeeSuccess(t *testing.T) {
 	assert.Equal(t, 200, int(responseBody["code"].(float64)))
 	assert.Equal(t, "OK", responseBody["status"])
 	assert.Equal(t, employee.Id, int(responseBody["data"].(map[string]interface{})["id"].(float64)))
-	assert.Equal(t, "Golang Unit Test Update", responseBody["data"].(map[string]interface{})["name"])
-	assert.Equal(t, "golangupdate@gmail.com", responseBody["data"].(map[string]interface{})["email"])
+	assert.Equal(t, "Golang Unit Test Update 2", responseBody["data"].(map[string]interface{})["name"])
+	assert.Equal(t, "golangupdate2@gmail.com", responseBody["data"].(map[string]interface{})["email"])
 	assert.Equal(t, "MALE", responseBody["data"].(map[string]interface{})["gender"])
 	assert.Equal(t, 20, int(responseBody["data"].(map[string]interface{})["age"].(float64)))
 	assert.Equal(t, "393728", responseBody["data"].(map[string]interface{})["phone"])
@@ -240,7 +240,7 @@ func TestGetEmployeeFailed(t *testing.T) {
 	truncateEmployee(db)
 
 	router := SetupRouter(db)
-	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/employees/404", nil)
+	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/employees/99999", nil)
 	request.Header.Add("X-API-Key", "RAHASIA")
 
 	recorder := httptest.NewRecorder()
@@ -301,7 +301,7 @@ func TestDeleteEmployeeFailed(t *testing.T) {
 	truncateEmployee(db)
 
 	router := SetupRouter(db)
-	request := httptest.NewRequest(http.MethodDelete, "http://localhost:3000/api/employees/404", nil)
+	request := httptest.NewRequest(http.MethodDelete, "http://localhost:3000/api/employees/3658", nil)
 	request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("X-API-Key", "RAHASIA")
 
